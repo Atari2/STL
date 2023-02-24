@@ -18,6 +18,8 @@
         "llvm-project": true,
         "stl/msbuild": true
     },
+    "cmake.buildDirectory": "${workspaceFolder}/out/build/x64",
+    "cmake.generator": "Ninja",
     "files.insertFinalNewline": true,
     "files.trimFinalNewlines": true,
     "files.trimTrailingWhitespace": true,
@@ -30,5 +32,6 @@
         "./llvm-project/libcxx/utils",
         "./llvm-project/llvm/utils/lit",
         "./tests/utils"
-    ]
+    ],
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

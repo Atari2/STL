@@ -3622,6 +3622,17 @@ _NODISCARD size_t formatted_size(const locale& _Loc, const wformat_string<_Types
     return _Buf._Count();
 }
 
+#if _HAS_CXX23
+_EXPORT_STD template <class _CharT>
+struct formatter<thread::id, _CharT> : _Formatter_base<_Thrd_id_t, _CharT, _Basic_format_arg_type::_UInt_type> {
+    using _MyBase = _Formatter_base<_Thrd_id_t, _CharT, _Basic_format_arg_type::_UInt_type>;
+    template <class _FormatContext>
+    auto format(const thread::id& _Val, _FormatContext& _FormatCtx) const {
+        return static_cast<const _MyBase*>(this)->format(_Val._Get_internal_id(_Format_badge<_CharT>{}), _FormatCtx);
+    }
+};
+#endif // _HAS_CXX23
+
 _STD_END
 
 #pragma pop_macro("new")

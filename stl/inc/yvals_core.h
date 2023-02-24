@@ -352,6 +352,7 @@
 // P2505R5 Monadic Functions For expected
 // P2549R1 unexpected<E>::error()
 // P2602R2 Poison Pills Are Too Toxic
+// P2693R1 Formatting thread::id and stacktrace
 
 // Parallel Algorithms Notes
 // C++ allows an implementation to implement parallel algorithms as calls to the serial algorithms.
@@ -1721,6 +1722,7 @@ _EMIT_STL_ERROR(STL1004, "C++98 unexpected() is incompatible with C++23 unexpect
 #define __cpp_lib_string_resize_and_overwrite 202110L
 #define __cpp_lib_to_underlying               202102L
 #define __cpp_lib_unreachable                 202202L
+#define __cpp_lib_formatters                  202302L
 #endif // _HAS_CXX23
 
 // macros with language mode sensitivity

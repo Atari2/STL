@@ -205,10 +205,30 @@ namespace this_thread {
     }
 } // namespace this_thread
 
+#if _HAS_CXX23
+_EXPORT_STD template <class _Ty, class _CharT>
+struct formatter;
+
+template <class _CharT>
+class _Format_badge {
+    friend formatter<thread::id, _CharT>;
+    constexpr _Format_badge()                                    = default;
+    constexpr _Format_badge(const _Format_badge&)                = default;
+    constexpr _Format_badge(_Format_badge&&) noexcept            = default;
+    constexpr _Format_badge& operator=(const _Format_badge&)     = default;
+    constexpr _Format_badge& operator=(_Format_badge&&) noexcept = default;
+};
+#endif // _HAS_CXX23
+
 class thread::id { // thread id
 public:
     id() noexcept = default; // id for no thread
-
+#if _HAS_CXX23
+    template <typename _Ch>
+    _Thrd_id_t _Get_internal_id(_Format_badge<_Ch>) const noexcept {
+        return _Id;
+    }
+#endif // _HAS_CXX23
 private:
     explicit id(_Thrd_id_t _Other_id) noexcept : _Id(_Other_id) {}
 
