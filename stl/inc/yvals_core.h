@@ -361,7 +361,6 @@
 // P2539R4 Synchronizing print() With The Underlying Stream
 // P2540R1 Empty Product For Certain Views
 // P2549R1 unexpected<E>::error()
-// P2602R2 Poison Pills Are Too Toxic
 // P2652R2 Disallowing User Specialization Of allocator_traits
 // P2693R1 Formatting thread::id and stacktrace
 
@@ -1757,7 +1756,7 @@ _EMIT_STL_ERROR(STL1004, "C++98 unexpected() is incompatible with C++23 unexpect
 #endif // __cpp_lib_concepts
 
 #define __cpp_lib_unreachable 202202L
-#define __cpp_lib_formatters                  202302L
+#define __cpp_lib_formatters  202302L
 #endif // _HAS_CXX23
 
 // macros with language mode sensitivity

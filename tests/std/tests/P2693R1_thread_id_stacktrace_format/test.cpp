@@ -11,7 +11,7 @@ static void basic_formatting_stacktrace() {
     const auto st  = std::stacktrace::current();
     const auto s   = std::format("{}", st);
     const auto exp = std::to_string(st);
-    const auto s2 = std::format("{} {} {}", 123, st, "hello world");
+    const auto s2  = std::format("{} {} {}", 123, st, "hello world");
     assert(s == exp);
     assert(s2 == "123 "s + exp + " hello world"s);
 }
