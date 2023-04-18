@@ -11,9 +11,6 @@ See https://github.com/microsoft/STL/wiki/Checklist-for-Toolset-Updates for more
 
 $ErrorActionPreference = 'Stop'
 
-# https://aka.ms/azps-changewarnings
-$Env:SuppressAzurePowerShellBreakingChangeWarnings = 'true'
-
 $CurrentDate = Get-Date
 
 $Location = 'eastus'
@@ -24,7 +21,7 @@ $ImageOffer = 'WindowsServer'
 $ImageSku = '2022-datacenter-g2'
 
 $ProgressActivity = 'Preparing STL CI pool'
-$TotalProgress = 25
+$TotalProgress = 26
 $CurrentProgress = 1
 
 <#
@@ -120,6 +117,13 @@ function Wait-Shutdown {
   }
 }
 
+####################################################################################################
+Display-ProgressBar -Status 'Silencing breaking change warnings'
+
+# https://aka.ms/azps-changewarnings
+Update-AzConfig `
+  -DisplayBreakingChangeWarning $false `
+  -Scope 'Process' | Out-Null
 
 ####################################################################################################
 Display-ProgressBar -Status 'Setting the subscription context'
@@ -207,6 +211,15 @@ $VM = Set-AzVMBootDiagnostic `
   -VM $VM `
   -Disable
 
+$VM = Set-AzVMSecurityProfile `
+  -VM $VM `
+  -SecurityType 'TrustedLaunch'
+
+$VM = Set-AzVMUefi `
+  -VM $VM `
+  -EnableVtpm $true `
+  -EnableSecureBoot $true
+
 New-AzVm `
   -ResourceGroupName $ResourceGroupName `
   -Location $Location `
@@ -284,7 +297,7 @@ $Gallery = New-AzGallery `
 ####################################################################################################
 Display-ProgressBar -Status 'Granting access to 1ES Resource Management'
 
-$ServicePrincipalObjectId = (Get-AzADServicePrincipal -DisplayName '1ES Resource Management').Id
+$ServicePrincipalObjectId = (Get-AzADServicePrincipal -DisplayName '1ES Resource Management' -First 1).Id
 
 New-AzRoleAssignment `
   -ObjectId $ServicePrincipalObjectId `
@@ -305,6 +318,7 @@ New-AzGalleryImageDefinition `
   -Publisher $ImagePublisher `
   -Offer $ImageOffer `
   -Sku $ImageSku `
+  -Feature @(@{ Name = 'SecurityType'; Value = 'TrustedLaunch'; }) `
   -HyperVGeneration 'V2' | Out-Null
 
 ####################################################################################################

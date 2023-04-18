@@ -1,11 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-// This must be as small as possible, because its contents are
-// injected into the msvcprt.lib and msvcprtd.lib import libraries.
-// Do not include or define anything else here.
-// In particular, basic_string must not be included here.
-
 #ifdef _M_CEE_PURE
 #error _M_CEE_PURE should not be defined when compiling vector_algorithms.cpp.
 #endif
@@ -66,6 +61,19 @@ namespace {
     void _Advance_bytes(const void*& _Target, ptrdiff_t _Offset) noexcept {
         _Target = static_cast<const unsigned char*>(_Target) + _Offset;
     }
+
+    // TRANSITION, DevCom-10331414
+    struct [[nodiscard]] _Zeroupper_on_exit {
+        _Zeroupper_on_exit() = default;
+
+        _Zeroupper_on_exit(const _Zeroupper_on_exit&)            = delete;
+        _Zeroupper_on_exit& operator=(const _Zeroupper_on_exit&) = delete;
+
+        ~_Zeroupper_on_exit() {
+            _mm256_zeroupper();
+        }
+    };
+
 } // unnamed namespace
 
 extern "C" {
@@ -89,6 +97,8 @@ __declspec(noalias) void __cdecl __std_swap_ranges_trivially_swappable_noalias(
             _Advance_bytes(_First1, 32);
             _Advance_bytes(_First2, 32);
         } while (_First1 != _Stop_at);
+
+        _mm256_zeroupper(); // TRANSITION, DevCom-10331414
     }
 
     constexpr size_t _Mask_16 = ~((static_cast<size_t>(1) << 4) - 1);
@@ -174,6 +184,8 @@ __declspec(noalias) void __cdecl __std_reverse_trivially_swappable_1(void* _Firs
             _mm256_storeu_si256(static_cast<__m256i*>(_Last), _Left_reversed);
             _Advance_bytes(_First, 32);
         } while (_First != _Stop_at);
+
+        _mm256_zeroupper(); // TRANSITION, DevCom-10331414
     }
 
     if (_Byte_length(_First, _Last) >= 32 && _Use_sse42()) {
@@ -214,6 +226,8 @@ __declspec(noalias) void __cdecl __std_reverse_trivially_swappable_2(void* _Firs
             _mm256_storeu_si256(static_cast<__m256i*>(_Last), _Left_reversed);
             _Advance_bytes(_First, 32);
         } while (_First != _Stop_at);
+
+        _mm256_zeroupper(); // TRANSITION, DevCom-10331414
     }
 
     if (_Byte_length(_First, _Last) >= 32 && _Use_sse42()) {
@@ -250,6 +264,8 @@ __declspec(noalias) void __cdecl __std_reverse_trivially_swappable_4(void* _Firs
             _mm256_storeu_si256(static_cast<__m256i*>(_Last), _Left_reversed);
             _Advance_bytes(_First, 32);
         } while (_First != _Stop_at);
+
+        _mm256_zeroupper(); // TRANSITION, DevCom-10331414
     }
 
     if (_Byte_length(_First, _Last) >= 32 && _Use_sse2()) {
@@ -284,6 +300,8 @@ __declspec(noalias) void __cdecl __std_reverse_trivially_swappable_8(void* _Firs
             _mm256_storeu_si256(static_cast<__m256i*>(_Last), _Left_reversed);
             _Advance_bytes(_First, 32);
         } while (_First != _Stop_at);
+
+        _mm256_zeroupper(); // TRANSITION, DevCom-10331414
     }
 
     if (_Byte_length(_First, _Last) >= 32 && _Use_sse2()) {
@@ -320,6 +338,8 @@ __declspec(noalias) void __cdecl __std_reverse_copy_trivially_copyable_1(
             _mm256_storeu_si256(static_cast<__m256i*>(_Dest), _Block_reversed);
             _Advance_bytes(_Dest, 32);
         } while (_Dest != _Stop_at);
+
+        _mm256_zeroupper(); // TRANSITION, DevCom-10331414
     }
 
     if (_Byte_length(_First, _Last) >= 16 && _Use_sse42()) {
@@ -355,6 +375,8 @@ __declspec(noalias) void __cdecl __std_reverse_copy_trivially_copyable_2(
             _mm256_storeu_si256(static_cast<__m256i*>(_Dest), _Block_reversed);
             _Advance_bytes(_Dest, 32);
         } while (_Dest != _Stop_at);
+
+        _mm256_zeroupper(); // TRANSITION, DevCom-10331414
     }
 
     if (_Byte_length(_First, _Last) >= 16 && _Use_sse42()) {
@@ -387,6 +409,8 @@ __declspec(noalias) void __cdecl __std_reverse_copy_trivially_copyable_4(
             _mm256_storeu_si256(static_cast<__m256i*>(_Dest), _Block_reversed);
             _Advance_bytes(_Dest, 32);
         } while (_Dest != _Stop_at);
+
+        _mm256_zeroupper(); // TRANSITION, DevCom-10331414
     }
 
     if (_Byte_length(_First, _Last) >= 16 && _Use_sse2()) {
@@ -417,6 +441,8 @@ __declspec(noalias) void __cdecl __std_reverse_copy_trivially_copyable_8(
             _mm256_storeu_si256(static_cast<__m256i*>(_Dest), _Block_reversed);
             _Advance_bytes(_Dest, 32);
         } while (_Dest != _Stop_at);
+
+        _mm256_zeroupper(); // TRANSITION, DevCom-10331414
     }
 
     if (_Byte_length(_First, _Last) >= 16 && _Use_sse2()) {
@@ -879,9 +905,13 @@ namespace {
                             // Select the smallest vertical indices from the smallest element mask
                             _Mask &= _mm_movemask_epi8(_Traits::_Cmp_eq(_Idx_min, _Idx_min_val));
                             unsigned long _H_pos;
-                            _BitScanForward(&_H_pos, _Mask); // Find the smallest horizontal index
+
+                            // Find the smallest horizontal index
+                            _BitScanForward(&_H_pos, _Mask); // lgtm [cpp/conditionallyuninitializedvariable]
+
                             const auto _V_pos = _Traits::_Get_v_pos(_Cur_idx_min, _H_pos); // Extract its vertical index
-                            _Res._Min         = _Base + _V_pos * 16 + _H_pos; // Finally, compute the pointer
+                            _Res._Min =
+                                _Base + static_cast<size_t>(_V_pos) * 16 + _H_pos; // Finally, compute the pointer
                         }
                     }
 
@@ -908,7 +938,10 @@ namespace {
                                 const __m128i _Idx_max = _Traits::_H_max_u(_Idx_max_val); // The greatest indices
                                 // Select the greatest vertical indices from the largest element mask
                                 _Mask &= _mm_movemask_epi8(_Traits::_Cmp_eq(_Idx_max, _Idx_max_val));
-                                _BitScanReverse(&_H_pos, _Mask); // Find the largest horizontal index
+
+                                // Find the largest horizontal index
+                                _BitScanReverse(&_H_pos, _Mask); // lgtm [cpp/conditionallyuninitializedvariable]
+
                                 _H_pos -= sizeof(_Cur_max_val) - 1; // Correct from highest val bit to lowest
                             } else {
                                 // Looking for the first occurrence of maximum
@@ -918,11 +951,14 @@ namespace {
                                 const __m128i _Idx_max     = _Traits::_H_min_u(_Idx_max_val); // The smallest indices
                                 // Select the smallest vertical indices from the largest element mask
                                 _Mask &= _mm_movemask_epi8(_Traits::_Cmp_eq(_Idx_max, _Idx_max_val));
-                                _BitScanForward(&_H_pos, _Mask); // Find the smallest horizontal index
+
+                                // Find the smallest horizontal index
+                                _BitScanForward(&_H_pos, _Mask); // lgtm [cpp/conditionallyuninitializedvariable]
                             }
 
                             const auto _V_pos = _Traits::_Get_v_pos(_Cur_idx_max, _H_pos); // Extract its vertical index
-                            _Res._Max         = _Base + _V_pos * 16 + _H_pos; // Finally, compute the pointer
+                            _Res._Max =
+                                _Base + static_cast<size_t>(_V_pos) * 16 + _H_pos; // Finally, compute the pointer
                         }
                     }
                     // Horizontal part done, results are saved, now need to see if there is another portion to process
@@ -1192,6 +1228,8 @@ namespace {
     template <class _Traits, class _Ty>
     const void* __stdcall __std_find_trivial_unsized(const void* _First, const _Ty _Val) noexcept {
         if (_Use_avx2()) {
+            _Zeroupper_on_exit _Guard; // TRANSITION, DevCom-10331414
+
             // We read by vector-sized pieces, and we align pointers to vector-sized boundary.
             // From start partial piece we mask out matches that don't belong to the range.
             // This makes sure we never cross page boundary, thus we read 'as if' sequentially.
@@ -1206,7 +1244,8 @@ namespace {
             __m256i _Data       = _mm256_load_si256(static_cast<const __m256i*>(_First));
             unsigned int _Bingo = static_cast<unsigned int>(_mm256_movemask_epi8(_Traits::_Cmp_avx(_Data, _Comparand)));
 
-            if ((_Bingo &= _Mask) != 0) {
+            _Bingo &= _Mask;
+            if (_Bingo != 0) {
                 unsigned long _Offset = _tzcnt_u32(_Bingo);
                 _Advance_bytes(_First, _Offset);
                 return _First;
@@ -1241,9 +1280,10 @@ namespace {
             __m128i _Data       = _mm_load_si128(static_cast<const __m128i*>(_First));
             unsigned int _Bingo = static_cast<unsigned int>(_mm_movemask_epi8(_Traits::_Cmp_sse(_Data, _Comparand)));
 
-            if ((_Bingo &= _Mask) != 0) {
+            _Bingo &= _Mask;
+            if (_Bingo != 0) {
                 unsigned long _Offset;
-                _BitScanForward(&_Offset, _Bingo);
+                _BitScanForward(&_Offset, _Bingo); // lgtm [cpp/conditionallyuninitializedvariable]
                 _Advance_bytes(_First, _Offset);
                 return _First;
             }
@@ -1254,7 +1294,7 @@ namespace {
 
                 if (_Bingo != 0) {
                     unsigned long _Offset;
-                    _BitScanForward(&_Offset, _Bingo);
+                    _BitScanForward(&_Offset, _Bingo); // lgtm [cpp/conditionallyuninitializedvariable]
                     _Advance_bytes(_First, _Offset);
                     return _First;
                 }
@@ -1266,13 +1306,14 @@ namespace {
         return _Find_trivial_unsized_fallback(_First, _Val);
     }
 
-
     template <class _Traits, class _Ty>
     const void* __stdcall __std_find_trivial(const void* _First, const void* _Last, _Ty _Val) noexcept {
         size_t _Size_bytes = _Byte_length(_First, _Last);
 
         const size_t _Avx_size = _Size_bytes & ~size_t{0x1F};
         if (_Avx_size != 0 && _Use_avx2()) {
+            _Zeroupper_on_exit _Guard; // TRANSITION, DevCom-10331414
+
             const __m256i _Comparand = _Traits::_Set_avx(_Val);
             const void* _Stop_at     = _First;
             _Advance_bytes(_Stop_at, _Avx_size);
@@ -1302,7 +1343,7 @@ namespace {
 
                 if (_Bingo != 0) {
                     unsigned long _Offset;
-                    _BitScanForward(&_Offset, _Bingo);
+                    _BitScanForward(&_Offset, _Bingo); // lgtm [cpp/conditionallyuninitializedvariable]
                     _Advance_bytes(_First, _Offset);
                     return _First;
                 }
@@ -1332,6 +1373,8 @@ namespace {
                 _Advance_bytes(_First, 32);
             } while (_First != _Stop_at);
             _Size_bytes &= 0x1F;
+
+            _mm256_zeroupper(); // TRANSITION, DevCom-10331414
         }
 
         const size_t _Sse_size = _Size_bytes & ~size_t{0xF};
